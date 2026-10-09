@@ -2,6 +2,8 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
+#include <network.h>
+
 void app_main() {
     while (1)
     {
