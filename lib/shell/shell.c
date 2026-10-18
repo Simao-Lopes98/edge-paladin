@@ -6,11 +6,13 @@ See: https://brennan.io/2015/01/16/write-a-shell-in-c/
 
 */
 #include <shell.h>
+#include <uart.h>
 
-static char * shellReadLine(void);
+static int shellLineIo(void);
 static char ** shellSplitLine(char * line);
 static int shellExecute(char ** args);
 static size_t shellGetFunctNumb(void);
+static int shellWriteLine (char * line);
 
 /* Built Ins */
 static int shellHelp (char **);
@@ -24,57 +26,93 @@ static int (* builtInFunc[]) (char **) = {
     &shellHelp
 };
 
+static char line [UART_RX_BUFF_SIZE];
+
 /* Shell Service */
 void shellSrv(void * pvParameters )
 {
-    char * line;
-    char ** args;
-    int status;
+    ESP_LOGI (SHELL_LOG_TAG, "Starting service");
 
-  do {
-    printf("> ");
-    line = shellReadLine();
-    args = shellSplitLine(line);
-    status = shellExecute(args);
+    int ret = 0;
+    char ** args = NULL;
+    bool writeNeeded = true; // Helps not writing ">" when no new input was added
 
-    free(line);
-    free(args);
-  } while (status);
-}
-
-static char * shellReadLine(void)
-{
-  int bufsize = SHELL_LINE_MAX_BUFF_SIZE;
-  int position = 0;
-  char *buffer = malloc(sizeof(char) * bufsize);
-  int c;
-
-  if (buffer == NULL) {
-    ESP_ERROR_CHECK (ESP_ERR_NO_MEM);
-  }
-
-  while (1) {
-    // Read a character
-    c = getchar();
-
-    // If we hit EOF, replace it with a null character and return.
-    if (c == EOF || c == '\n') {
-      buffer[position] = '\0';
-      return buffer;
-    } else {
-      buffer[position] = c;
-    }
-    position++;
-
-    // If we have exceeded the buffer, reallocate.
-    if (position >= bufsize) {
-      bufsize += SHELL_LINE_MAX_BUFF_SIZE;
-      buffer = realloc(buffer, bufsize);
-      if (buffer == NULL) {
-        ESP_ERROR_CHECK (ESP_ERR_NO_MEM);
+  while (true)
+  {
+    if (writeNeeded == true)
+    {
+      ret = shellWriteLine("> ");
+      if (ret < 0)
+      {
+        // Error writing let user know
+        ESP_LOGW (SHELL_LOG_TAG, "Error shellWriteLine");
+        // Tap task
+        vTaskDelay(pdMS_TO_TICKS(100));
+        continue;
       }
     }
-  } 
+
+    ret = shellLineIo();
+
+    ESP_LOGI (SHELL_LOG_TAG, "Read %s", line);
+
+    args = shellSplitLine(line);
+    if (args == NULL)
+    {
+      // Error reading let user know
+      ESP_LOGW (SHELL_LOG_TAG, "Error shellSplitLine");
+      // Tap task
+      vTaskDelay(pdMS_TO_TICKS(100));
+      continue;
+    }
+
+    (void) shellExecute(args);
+
+    // Clean up
+    free(args);
+
+    writeNeeded = true; // New line needed
+    vTaskDelay(pdMS_TO_TICKS(50)); // Some time to avoid the watchdog
+  }
+  
+}
+
+static int shellWriteLine (char * line)
+{
+  return uartWrite (UART_PORT, line);
+}
+
+/*
+Function reads each char and echos it until \r or \n 
+*/
+static int shellLineIo(void)
+{
+  char c = 0;
+  int count = 0;
+  int ret = 0;
+  do
+  {
+    ret = uartRead(UART_NUM_1, &c);
+    if (ret < 0)
+    {
+      // Error reading let user know
+      ESP_LOGE (SHELL_LOG_TAG, "Error readUartDrv");
+      // Tap task
+      continue;
+    } else if (ret == 0)
+    {
+      // Nothing to read continue
+      continue;
+    }
+    // echo char
+    uartWriteByte(UART_NUM_1, &c);
+    line[count] = c;
+    count++;
+    ESP_LOGI(SHELL_LOG_TAG, "%c, %d", c, c);
+  } while (c != '\r' || c != '\n');
+  
+
+  return count;
 }
 
 static char ** shellSplitLine(char * line)
@@ -85,7 +123,7 @@ static char ** shellSplitLine(char * line)
   char *token;
 
   if (tokens == NULL) {
-    ESP_ERROR_CHECK (ESP_ERR_NO_MEM);
+    return NULL;
   }
 
   token = strtok(line, SHELL_TOKEN_DELIM);
@@ -98,7 +136,7 @@ static char ** shellSplitLine(char * line)
       bufsize += SHELL_TOKEN_BUF_SIZE;
       tokens = realloc(tokens, bufsize * sizeof(char*));
       if (tokens == NULL) {
-        ESP_ERROR_CHECK (ESP_ERR_NO_MEM);
+        return NULL;
       }
     }
 
@@ -132,7 +170,7 @@ static int shellExecute(char ** args)
 /* Built Ins */
 static int shellHelp (char **)
 {
-    printf ("Hello form the SHELL :)");
+    uartWrite (UART_PORT, "Hello form the SHELL :)");
     
     return 1;
 }
