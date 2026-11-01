@@ -23,11 +23,13 @@ static int shellClear (char **);
 static shellBuiltIn_t builtInList [] = {
 	{
 		.name 		= "help",
-		.function 	= &shellHelp
+		.function 	= &shellHelp,
+		.desc		= SHELL_HELP_DESC
 	},
 	{
 		.name 		= "clear",
-		.function 	= &shellClear
+		.function 	= &shellClear,
+		.desc		= SHELL_CLEAR_DESC
 	}
 };
 
@@ -209,8 +211,16 @@ static void shellPrintBanner(void)
 /* Built Ins */
 static int shellHelp (char **)
 {
-    uartWrite (UART_PORT, "Hello form the SHELL :)");
-
+	shellWriteLine (SHELL_HELP_DESC);
+	shellWriteNewLine();
+    for (size_t i = 1; i < shellGetFunctNumb(); i++)
+	{
+		shellWriteLine (builtInList[i].name);
+		shellWriteLine (" - ");
+		shellWriteLine (builtInList[i].desc);
+		shellWriteNewLine();
+	}
+	
     return 1;
 }
 

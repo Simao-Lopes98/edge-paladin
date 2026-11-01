@@ -14,13 +14,16 @@
 #define SHELL_TOKEN_DELIM           " \t\r\n\a"
 #define SHELL_LOG_TAG "SHELL"
 #define SHELL_BUILTIN_MAX_NAME      16
+#define SHELL_BUILTIN_MAX_DESC      512
+#define SHELL_HELP_DESC             "Lists all functions"
+#define SHELL_CLEAR_DESC            "Clears the terminal screen"
 
 typedef struct shellBuiltIn
 {
     int (* function) (char **);
     char name [SHELL_BUILTIN_MAX_NAME];
+    char desc [SHELL_BUILTIN_MAX_DESC];
 } shellBuiltIn_t;
-
 
 extern void shellSrv(void * pvParameters);
 
