@@ -31,49 +31,48 @@ static char line [UART_RX_BUFF_SIZE];
 /* Shell Service */
 void shellSrv(void * pvParameters )
 {
-    ESP_LOGI (SHELL_LOG_TAG, "Starting service");
+		ESP_LOGI (SHELL_LOG_TAG, "Starting service");
 
-    int ret = 0;
-    char ** args = NULL;
-    bool writeNeeded = true; // Helps not writing ">" when no new input was added
+		int ret = 0;
+		char ** args = NULL;
+		bool writeNeeded = true; // Helps not writing ">" when no new input was added
 
-  while (true)
-  {
-    if (writeNeeded == true)
-    {
-      ret = shellWriteLine("> ");
-      if (ret < 0)
-      {
-        // Error writing let user know
-        ESP_LOGW (SHELL_LOG_TAG, "Error shellWriteLine");
-        // Tap task
-        vTaskDelay(pdMS_TO_TICKS(100));
-        continue;
-      }
-    }
+	while (true)
+	{
+		if (writeNeeded == true)
+		{
+			ret = shellWriteLine("\r\n> ");
+			if (ret < 0)
+			{
+			// Error writing let user know
+			ESP_LOGW (SHELL_LOG_TAG, "Error shellWriteLine");
+			// Tap task
+			vTaskDelay(pdMS_TO_TICKS(100));
+			continue;
+			}
+		}
 
-    ret = shellLineIo();
+		ret = shellLineIo();
 
-    ESP_LOGI (SHELL_LOG_TAG, "Read %s", line);
+		ESP_LOGI (SHELL_LOG_TAG, "Read %s", line);
 
-    args = shellSplitLine(line);
-    if (args == NULL)
-    {
-      // Error reading let user know
-      ESP_LOGW (SHELL_LOG_TAG, "Error shellSplitLine");
-      // Tap task
-      vTaskDelay(pdMS_TO_TICKS(100));
-      continue;
-    }
+		args = shellSplitLine(line);
+		if (args == NULL)
+		{
+			// Error reading let user know
+			ESP_LOGW (SHELL_LOG_TAG, "Error shellSplitLine");
+			// Tap task
+			vTaskDelay(pdMS_TO_TICKS(100));
+			continue;
+		}
 
-    (void) shellExecute(args);
+		(void) shellExecute(args);
 
-    // Clean up
-    free(args);
+		// Clean up
+		free(args);
 
-    writeNeeded = true; // New line needed
-    vTaskDelay(pdMS_TO_TICKS(50)); // Some time to avoid the watchdog
-  }
+		writeNeeded = true; // New line needed
+	}
   
 }
 
@@ -87,32 +86,47 @@ Function reads each char and echos it until \r or \n
 */
 static int shellLineIo(void)
 {
-  char c = 0;
-  int count = 0;
-  int ret = 0;
-  do
-  {
-    ret = uartRead(UART_NUM_1, &c);
-    if (ret < 0)
-    {
-      // Error reading let user know
-      ESP_LOGE (SHELL_LOG_TAG, "Error readUartDrv");
-      // Tap task
-      continue;
-    } else if (ret == 0)
-    {
-      // Nothing to read continue
-      continue;
-    }
-    // echo char
-    uartWriteByte(UART_NUM_1, &c);
-    line[count] = c;
-    count++;
-    ESP_LOGI(SHELL_LOG_TAG, "%c, %d", c, c);
-  } while (c != '\r' || c != '\n');
-  
+	char c = 0;
+	int count = 0;
+	int ret = 0;
+	do
+	{
+		ret = uartRead(UART_NUM_1, &c);
+		if (ret < 0)
+		{
+			// Error reading let user know
+			ESP_LOGE (SHELL_LOG_TAG, "Error readUartDrv");
+			// Tap task
+			return -1;
+		} else if (ret == 0)
+		{
+			// Nothing to read continue
+			continue;
+		}
 
-  return count;
+		// Backspace
+		if (c == 8)
+		{
+			shellWriteLine("\b \b");
+			if (count > 0)
+			{
+				count--;
+			}
+			line[count] = '\0';
+			continue;
+		}
+
+		// Other than Enter
+		if (c != '\n')
+		{
+			// echo char
+			uartWriteByte(UART_NUM_1, &c);
+			line[count] = c;
+			count++;
+		}
+		
+	} while (c != '\n' && count < UART_RX_BUFF_SIZE);
+	return count;
 }
 
 static char ** shellSplitLine(char * line)
