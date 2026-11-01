@@ -9,6 +9,7 @@ See: https://brennan.io/2015/01/16/write-a-shell-in-c/
 #include <uart.h>
 
 static int shellLineIo(void);
+static int shellWriteNewLine (void);
 static char ** shellSplitLine(char * line);
 static int shellExecute(char ** args);
 static size_t shellGetFunctNumb(void);
@@ -31,28 +32,23 @@ static char line [UART_RX_BUFF_SIZE];
 /* Shell Service */
 void shellSrv(void * pvParameters )
 {
-		ESP_LOGI (SHELL_LOG_TAG, "Starting service");
+	ESP_LOGI (SHELL_LOG_TAG, "Starting service");
 
-		int ret = 0;
-		char ** args = NULL;
-		bool writeNeeded = true; // Helps not writing ">" when no new input was added
+	int ret = 0;
+	char ** args = NULL;
+	bool writeNeeded = true; // Helps not writing ">" when no new input was added
 
 	while (true)
 	{
 		if (writeNeeded == true)
 		{
-			ret = shellWriteLine("\r\n> ");
-			if (ret < 0)
-			{
-			// Error writing let user know
-			ESP_LOGW (SHELL_LOG_TAG, "Error shellWriteLine");
-			// Tap task
-			vTaskDelay(pdMS_TO_TICKS(100));
-			continue;
-			}
+			shellWriteNewLine();
+			shellWriteLine("> ");
 		}
 
 		ret = shellLineIo();
+
+		shellWriteNewLine();
 
 		ESP_LOGI (SHELL_LOG_TAG, "Read %s", line);
 
@@ -81,6 +77,11 @@ static int shellWriteLine (char * line)
   return uartWrite (UART_PORT, line);
 }
 
+static int shellWriteNewLine (void)
+{
+	char newLine [] = "\r\n";
+	return uartWrite (UART_PORT, newLine);
+}
 /*
 Function reads each char and echos it until \r or \n 
 */
@@ -107,17 +108,17 @@ static int shellLineIo(void)
 		// Backspace
 		if (c == 8)
 		{
-			shellWriteLine("\b \b");
 			if (count > 0)
 			{
+				shellWriteLine("\b \b");
 				count--;
+				line[count] = '\0';
 			}
-			line[count] = '\0';
 			continue;
 		}
 
 		// Other than Enter
-		if (c != '\n')
+		if (c != '\n' && c != '\r')
 		{
 			// echo char
 			uartWriteByte(UART_NUM_1, &c);
@@ -125,7 +126,10 @@ static int shellLineIo(void)
 			count++;
 		}
 		
-	} while (c != '\n' && count < UART_RX_BUFF_SIZE);
+	} while (c != '\n' && c != '\r' && count < (UART_RX_BUFF_SIZE - 1));
+
+	// Add EOS
+	line[count] = '\0';
 	return count;
 }
 
