@@ -14,30 +14,48 @@ static char ** shellSplitLine(char * line);
 static int shellExecute(char ** args);
 static size_t shellGetFunctNumb(void);
 static int shellWriteLine (char * line);
+static void shellPrintBanner(void);
 
 /* Built Ins */
 static int shellHelp (char **);
+static int shellClear (char **);
 
-
-char *builtInStr[] = {
-  "help"
-};
-
-static int (* builtInFunc[]) (char **) = {
-    &shellHelp
+static shellBuiltIn_t builtInList [] = {
+	{
+		.name 		= "help",
+		.function 	= &shellHelp
+	},
+	{
+		.name 		= "clear",
+		.function 	= &shellClear
+	}
 };
 
 static char line [UART_RX_BUFF_SIZE];
+
+static const char *banner =
+"\r\n"
+"  ____   _    _      _    ____ ___ _   _ \r\n"
+" |  _ \\ / \\  | |    / \\  |  _ \\_ _| \\ | |\r\n"
+" | |_) / _ \\ | |   / _ \\ | | | | ||  \\| |\r\n"
+" |  __/ ___ \\| |__/ ___ \\| |_| | || |\\  |\r\n"
+" |_| /_/   \\_\\____/_/   \\_\\____/___|_| \\_|\r\n"
+"\r\n"
+"   Embedded Systems Command Interface\r\n"
+"\r\n";
 
 /* Shell Service */
 void shellSrv(void * pvParameters )
 {
 	ESP_LOGI (SHELL_LOG_TAG, "Starting service");
 
-	int ret = 0;
 	char ** args = NULL;
-	bool writeNeeded = true; // Helps not writing ">" when no new input was added
+	// Helps not writing ">" when no new input was added
+	bool writeNeeded = true;
+	vTaskDelay(pdMS_TO_TICKS(150));
 
+	shellPrintBanner();
+	
 	while (true)
 	{
 		if (writeNeeded == true)
@@ -46,11 +64,11 @@ void shellSrv(void * pvParameters )
 			shellWriteLine("> ");
 		}
 
-		ret = shellLineIo();
+		shellLineIo();
 
 		shellWriteNewLine();
 
-		ESP_LOGI (SHELL_LOG_TAG, "Read %s", line);
+		ESP_LOGI (SHELL_LOG_TAG, "Incoming command %s", line);
 
 		args = shellSplitLine(line);
 		if (args == NULL)
@@ -97,7 +115,6 @@ static int shellLineIo(void)
 		{
 			// Error reading let user know
 			ESP_LOGE (SHELL_LOG_TAG, "Error readUartDrv");
-			// Tap task
 			return -1;
 		} else if (ret == 0)
 		{
@@ -146,7 +163,6 @@ static char ** shellSplitLine(char * line)
 
   token = strtok(line, SHELL_TOKEN_DELIM);
   while (token != NULL) {
-    // ESP_LOGI(LOG_LOCAL_LEVEL,"Token %d - %s", position, token);
     tokens[position] = token;
     position++;
 
@@ -166,7 +182,7 @@ static char ** shellSplitLine(char * line)
 
 static size_t shellGetFunctNumb(void)
 {
-    return sizeof(builtInFunc)/sizeof(char*);  
+    return sizeof(builtInList)/sizeof(shellBuiltIn_t);  
 }
 
 static int shellExecute(char ** args)
@@ -177,18 +193,29 @@ static int shellExecute(char ** args)
   }
 
   for (int i = 0; i < shellGetFunctNumb(); i++) {
-    if (strcmp(args[0], builtInStr[i]) == 0) {
-      return (*builtInFunc[i])(args);
+    if (strcmp(args[0], builtInList[i].name) == 0) {
+      return (*builtInList[i].function)(args);
     }
   }
 
   return 1;
 }
 
+static void shellPrintBanner(void)
+{
+	uartWrite (UART_PORT, (char *) banner);
+}
+
 /* Built Ins */
 static int shellHelp (char **)
 {
     uartWrite (UART_PORT, "Hello form the SHELL :)");
-    
+
+    return 1;
+}
+
+static int shellClear (char **)
+{
+    uartWrite (UART_PORT, "\033[2J\033[H");
     return 1;
 }
