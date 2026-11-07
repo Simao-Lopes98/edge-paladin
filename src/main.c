@@ -6,6 +6,7 @@
 #include <network.h>
 #include <shell.h>
 #include <uart.h>
+#include <utils.h>
 
 #define MAIN_TAG "Main"
 
