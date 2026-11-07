@@ -13,7 +13,6 @@ static int shellWriteNewLine (void);
 static char ** shellSplitLine(char * line);
 static int shellExecute(char ** args);
 static size_t shellGetNumbCmd(void);
-static int shellWriteLine (char * line);
 static void shellPrintBanner(void);
 
 /* CMDs*/
@@ -84,7 +83,7 @@ void shellSrv(void * pvParameters )
   
 }
 
-static int shellWriteLine (char * line)
+int shellWriteLine (char * line)
 {
   return uartWrite (UART_PORT, line);
 }
