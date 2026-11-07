@@ -1,0 +1,15 @@
+[sections:my_cmds]
+entries:
+    .my_cmds+
+
+[scheme:my_cmds]
+entries:
+    my_cmds -> flash_rodata
+
+# SURROUND keyword Generate symbols before and after the placement.
+# The generated symbols follow the naming _<name>_start and _<name>_end
+[mapping:my_cmds]
+archive: *
+entries:
+    * (my_cmds);
+    my_cmds -> flash_rodata KEEP() SORT(name) SURROUND(my_cmds)
