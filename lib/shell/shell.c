@@ -12,26 +12,18 @@ static int shellLineIo(void);
 static int shellWriteNewLine (void);
 static char ** shellSplitLine(char * line);
 static int shellExecute(char ** args);
-static size_t shellGetFunctNumb(void);
+static size_t shellGetNumbCmd(void);
 static int shellWriteLine (char * line);
 static void shellPrintBanner(void);
 
-/* Built Ins */
+/* CMDs*/
 static int shellHelp (char **);
 static int shellClear (char **);
 
-static shellBuiltIn_t builtInList [] = {
-	{
-		.name 		= "help",
-		.function 	= &shellHelp,
-		.desc		= SHELL_HELP_DESC
-	},
-	{
-		.name 		= "clear",
-		.function 	= &shellClear,
-		.desc		= SHELL_CLEAR_DESC
-	}
-};
+/* Register CMDs */
+
+CMD_REGISTER(help, &shellHelp, SHELL_HELP_DESC);
+CMD_REGISTER(clear, &shellClear, SHELL_CLEAR_DESC);
 
 static char line [UART_RX_BUFF_SIZE];
 
@@ -182,25 +174,33 @@ static char ** shellSplitLine(char * line)
   return tokens;
 }
 
-static size_t shellGetFunctNumb(void)
+static size_t shellGetNumbCmd(void)
 {
-    return sizeof(builtInList)/sizeof(shellBuiltIn_t);  
+    return CMD_COUNT();
 }
 
 static int shellExecute(char ** args)
 {
-  if (args[0] == NULL) {
-    // An empty command was entered.
-    return 1;
-  }
+	char unkownCmdMsg [SHELL_UNKOWN_CMD_MSG_SZ];
+	if (args[0] == NULL) {
+		// An empty command was entered.
+		return 1;
+	}
 
-  for (int i = 0; i < shellGetFunctNumb(); i++) {
-    if (strcmp(args[0], builtInList[i].name) == 0) {
-      return (*builtInList[i].function)(args);
-    }
-  }
+    for (const shellCmd_t *c = _my_cmds_start; c < _my_cmds_end; c++)
+	{	
+		if (strcmp(args[0], c->name) == 0) {
+			return (c->function(args));
+		}
+	}
 
-  return 1;
+	// Unknown command
+	snprintf (unkownCmdMsg, SHELL_UNKOWN_CMD_MSG_SZ, "%s : %s",
+	SHELL_UNKOWN_CMD_STR, args[0]);
+	ESP_LOGI(SHELL_LOG_TAG, "Invalid cmd: %d", shellGetNumbCmd());
+	shellWriteLine (unkownCmdMsg);
+
+	return 1;
 }
 
 static void shellPrintBanner(void)
@@ -213,11 +213,17 @@ static int shellHelp (char **)
 {
 	shellWriteLine (SHELL_HELP_DESC);
 	shellWriteNewLine();
-    for (size_t i = 1; i < shellGetFunctNumb(); i++)
+	/* Cycle through memory region where cmds are registerd */
+    for (const shellCmd_t *c = _my_cmds_start; c < _my_cmds_end; c++)
 	{
-		shellWriteLine (builtInList[i].name);
+		// Skip "help" it self
+		if (strncmp ((char *)c->name, "help", SHELL_BUILTIN_MAX_NAME) == 0)
+		{
+			continue;
+		}
+		shellWriteLine ((char *)c->name);
 		shellWriteLine (" - ");
-		shellWriteLine (builtInList[i].desc);
+		shellWriteLine ((char *)c->desc);
 		shellWriteNewLine();
 	}
 	
