@@ -17,6 +17,12 @@
 #define UART_RX_BUFF_SIZE (SHELL_LINE_MAX_BUFF_SIZE * 2)
 #define UART_LOG_TAG "UART"
 
+
+#define UART_CMD_DESC                  "Lists UART parameters"
+#define UART_MAX_STR_SZ                256
+#define UART_MAX_CMD_SZ                8
+#define UART_MAX_PARITY_STR            32
+
 extern esp_err_t uartInitDrv (  uart_port_t port, 
                                 gpio_num_t tx, 
                                 gpio_num_t rx, 
