@@ -60,12 +60,12 @@ These are probably the most useful commands to implement first.
 |------|-----------|---------------------------------------------|-----------------------------|
 | [x]  | `help`    | List available commands                     | Your command registry       |
 | [x]  | `clear`   | Clear terminal                              | ANSI escape sequences       |
-| [ ]  | `info`    | Chip model, cores, revision, flash size     | `esp_chip_info()`           |
-| [ ]  | `uptime`  | Time since boot                             | `esp_timer_get_time()`      |
+| [x]  | `info`    | Chip model, cores, revision, flash size     | `esp_chip_info()`           |
+| [x]  | `uptime`  | Time since boot                             | `esp_timer_get_time()`      |
 | [ ]  | `heap`    | Free heap, minimum free heap, largest block | `heap_caps_get_*()`         |
 | [ ]  | `tasks`   | List FreeRTOS tasks and their state         | `vTaskList()`               |
 | [ ]  | `version` | Firmware version and build date             | Compile-time macros         |
-| [ ]  | `reset`   | Restart the ESP32                           | `esp_restart()`             |
+| [x]  | `reset`   | Restart the ESP32                           | `esp_restart()`             |
 
 ### 2. Hardware interaction
 Make the shell useful for interacting with the actual hardware.
