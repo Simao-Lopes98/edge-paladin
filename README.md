@@ -77,4 +77,4 @@ Make the shell useful for interacting with the actual hardware.
 | [ ]  | `gpio mode <pin> <in/out>` | Configure GPIO direction         |
 | [ ]  | `adc read <channel>`       | Read an ADC channel              |
 | [ ]  | `pwm set <freq> <duty>`    | Configure PWM                    |
-| [ ]  | `uart status`              | Show UART configuration and status |
+| [x]  | `uart status`              | Show UART configuration and status |
