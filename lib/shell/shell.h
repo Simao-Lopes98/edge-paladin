@@ -20,7 +20,6 @@
 #define SHELL_HELP_DESC             "Lists all functions"
 #define SHELL_CLEAR_DESC            "Clears the terminal screen"
 
-
 typedef struct shellCmd
 {
     int (* function) (char **);

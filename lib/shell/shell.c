@@ -180,6 +180,7 @@ static size_t shellGetNumbCmd(void)
 
 static int shellExecute(char ** args)
 {
+	int ret = 0;
 	char unkownCmdMsg [SHELL_UNKOWN_CMD_MSG_SZ];
 	if (args[0] == NULL) {
 		// An empty command was entered.
@@ -189,7 +190,10 @@ static int shellExecute(char ** args)
     for (const shellCmd_t *c = _my_cmds_start; c < _my_cmds_end; c++)
 	{	
 		if (strcmp(args[0], c->name) == 0) {
-			return (c->function(args));
+			shellWriteNewLine();
+			ret = c->function(args);
+			shellWriteNewLine();
+			return ret;
 		}
 	}
 
